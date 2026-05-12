@@ -17,7 +17,7 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-Backend-0d1b2a?style=for-the-badge&logo=fastapi&logoColor=08a5bb&labelColor=021820)](https://fastapi.tiangolo.com)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-RDS-0d1b2a?style=for-the-badge&logo=postgresql&logoColor=08a5bb&labelColor=021820)](https://postgresql.org)
 [![AWS](https://img.shields.io/badge/AWS-Cloud-0d1b2a?style=for-the-badge&logo=amazonaws&logoColor=08a5bb&labelColor=021820)](https://aws.amazon.com)
-[![Claude](https://img.shields.io/badge/Claude-AI-0d1b2a?style=for-the-badge&logo=anthropic&logoColor=08a5bb&labelColor=021820)](https://anthropic.com)
+[![Grok](https://img.shields.io/badge/Grok-AI-0d1b2a?style=for-the-badge&logo=x&logoColor=08a5bb&labelColor=021820)](https://x.ai)
 
 </div>
 
