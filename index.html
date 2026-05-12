@@ -1,0 +1,1400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>BlueQuery — Ocean Intelligence Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Mono:wght@300;400;500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --brand:#08a5bb;--brand-dim:#0892A5;--brand-deep:#056070;
+  --deep:#010e14;--mid:#021820;--surface:#032430;
+  --text-primary:#d4eef2;--text-muted:#6ab4c0;--text-faint:rgba(106,180,192,0.45);
+  --border:rgba(8,146,165,0.18);--border-bright:rgba(8,165,187,0.4);
+  --font-head:'Syne',sans-serif;--font-mono:'DM Mono',monospace;--font-body:'Inter',sans-serif;
+  --chat-bg:#f0f9fb;--chat-border:rgba(8,146,165,0.12);
+  --sidebar-w:230px;
+}
+html,body{height:100%;overflow:hidden;}
+body{font-family:var(--font-body);background:var(--deep);display:flex;min-height:100vh;}
+.shell{display:flex;width:100vw;height:100vh;overflow:hidden;}
+
+/* ── SIDEBAR ── */
+.sidebar{width:var(--sidebar-w);flex-shrink:0;background:var(--mid);border-right:1px solid var(--border);display:flex;flex-direction:column;position:relative;overflow:hidden;}
+.sb-wave{position:absolute;bottom:0;left:0;right:0;height:200px;pointer-events:none;z-index:0;opacity:0.6;}
+.sb-inner{position:relative;z-index:1;display:flex;flex-direction:column;height:100%;}
+.logo{padding:18px 16px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.logo-icon{width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,var(--brand-deep),var(--brand));display:flex;align-items:center;justify-content:center;box-shadow:0 0 16px rgba(8,165,187,0.3);flex-shrink:0;}
+.logo-name{font-family:var(--font-head);font-size:15px;font-weight:700;color:var(--text-primary);letter-spacing:-0.3px;}
+.logo-badge{margin-left:auto;font-size:9px;font-family:var(--font-mono);color:var(--brand);border:1px solid rgba(8,165,187,0.3);padding:2px 7px;border-radius:20px;background:rgba(8,165,187,0.06);}
+.nav-scroll{flex:1;overflow-y:auto;padding:10px;scrollbar-width:thin;scrollbar-color:rgba(8,146,165,0.15) transparent;}
+.nav-scroll::-webkit-scrollbar{width:2px;}
+.nav-scroll::-webkit-scrollbar-thumb{background:rgba(8,146,165,0.15);}
+.nav-label{font-size:9px;letter-spacing:1.6px;text-transform:uppercase;color:var(--text-faint);padding:12px 7px 5px;font-family:var(--font-mono);}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;font-size:12.5px;color:var(--text-muted);cursor:pointer;transition:all 0.15s;border:1px solid transparent;margin-bottom:2px;}
+.nav-item:hover{background:rgba(8,165,187,0.07);color:var(--text-primary);}
+.nav-item.active{background:rgba(8,165,187,0.12);color:var(--text-primary);border-color:rgba(8,165,187,0.25);}
+.nav-item svg{flex-shrink:0;opacity:0.8;}
+.nav-item.active svg{opacity:1;}
+.db-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:7px;margin-bottom:3px;}
+.db-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.db-dot.live{background:var(--brand);box-shadow:0 0 0 2.5px rgba(8,165,187,0.2);}
+.db-dot.off{background:#2d4a52;}
+.db-info{flex:1;min-width:0;}
+.db-name{font-size:11.5px;color:var(--text-primary);}
+.db-status-txt{font-size:9.5px;color:var(--brand);margin-top:1px;}
+.db-status-txt.off{color:#3a6070;}
+.llm-section{padding:10px 10px 4px;border-top:1px solid var(--border);}
+.llm-badge{display:flex;align-items:center;gap:7px;padding:4px 8px;font-size:10px;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:2px;}
+.llm-dot{width:5px;height:5px;border-radius:50%;background:#2d4a52;flex-shrink:0;}
+.llm-dot.ok{background:var(--brand);box-shadow:0 0 5px var(--brand);animation:blink 2s ease-in-out infinite;}
+.llm-dot.err{background:#c0392b;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+.sb-footer{flex-shrink:0;padding:12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:9px;background:rgba(1,14,20,0.5);}
+.avatar{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--brand-deep),var(--brand));display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;border:1.5px solid rgba(8,165,187,0.35);font-family:var(--font-head);}
+.sb-footer-name{font-size:12px;font-weight:500;color:var(--text-primary);}
+.sb-footer-role{font-size:9.5px;color:var(--brand);margin-top:1px;}
+
+/* ── MAIN ── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--chat-bg);}
+.topbar{flex-shrink:0;height:58px;background:var(--deep);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:14px;position:relative;overflow:hidden;}
+.topbar-wave{position:absolute;inset:0;pointer-events:none;}
+.topbar-content{position:relative;z-index:1;display:flex;align-items:center;width:100%;gap:14px;}
+.topbar-title{font-family:var(--font-head);font-size:15px;font-weight:600;color:var(--text-primary);}
+.topbar-sub{font-size:10px;color:var(--text-muted);margin-top:2px;font-family:var(--font-mono);}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:8px;}
+.status-pill{font-size:10px;font-family:var(--font-mono);padding:3px 10px;border-radius:20px;border:1px solid rgba(8,165,187,0.4);color:var(--brand);background:rgba(8,165,187,0.07);display:flex;align-items:center;gap:5px;}
+.status-dot{width:5px;height:5px;border-radius:50%;background:var(--brand);box-shadow:0 0 5px var(--brand);animation:blink 2s ease-in-out infinite;}
+.tabbar{flex-shrink:0;background:var(--deep);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:2px;overflow-x:auto;scrollbar-width:none;}
+.tabbar::-webkit-scrollbar{display:none;}
+.tab{padding:10px 13px;font-size:11.5px;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all 0.15s;font-family:var(--font-body);display:flex;align-items:center;gap:5px;}
+.tab:hover{color:var(--text-primary);}
+.tab.active{color:var(--brand);border-bottom-color:var(--brand);}
+.panels{flex:1;overflow:hidden;display:flex;flex-direction:column;}
+.panel{display:none;flex:1;flex-direction:column;overflow:hidden;}
+.panel.active{display:flex;}
+
+/* ── OVERVIEW SELECTOR BAR ── */
+.overview-bar{flex-shrink:0;background:#fff;border-bottom:1px solid var(--chat-border);padding:8px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.ov-label{font-size:10px;color:var(--brand-deep);font-family:var(--font-mono);font-weight:500;}
+.ov-select{background:#f4fafb;border:1px solid rgba(8,146,165,0.25);border-radius:6px;padding:4px 9px;font-size:11.5px;color:#0a2c35;outline:none;cursor:pointer;font-family:var(--font-body);}
+.ov-select:focus{border-color:var(--brand);}
+.ov-btn{padding:4px 12px;border-radius:6px;border:1px solid rgba(8,165,187,0.4);background:rgba(8,165,187,0.08);color:var(--brand-deep);font-size:11px;cursor:pointer;font-family:var(--font-body);transition:all 0.15s;}
+.ov-btn:hover{background:rgba(8,165,187,0.16);}
+.ov-divider{width:1px;height:18px;background:rgba(8,146,165,0.2);}
+
+/* ── CHAT ── */
+.chat-area{flex:1;padding:18px 20px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;background:var(--chat-bg);}
+.chat-area::-webkit-scrollbar{width:4px;}
+.chat-area::-webkit-scrollbar-thumb{background:rgba(8,146,165,0.15);border-radius:4px;}
+.msg-row{display:flex;gap:10px;align-items:flex-start;animation:fadeup 0.25s ease both;}
+.msg-row.user{flex-direction:row-reverse;}
+@keyframes fadeup{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.msg-av{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;}
+.msg-av.ai{background:var(--mid);border:1px solid var(--border-bright);}
+.msg-av.user{background:linear-gradient(135deg,var(--brand-deep),var(--brand));color:#fff;font-family:var(--font-head);}
+.bubble{max-width:82%;padding:11px 14px;font-size:13px;line-height:1.7;font-family:var(--font-body);}
+.bubble.ai{background:#fff;border:1px solid var(--chat-border);border-radius:3px 13px 13px 13px;color:#0a2c35;box-shadow:0 2px 8px rgba(8,146,165,0.06);}
+.bubble.user{background:linear-gradient(135deg,var(--brand-dim),var(--brand-deep));color:#fff;border-radius:13px 3px 13px 13px;}
+.sql-block{margin-top:10px;background:var(--deep);border-radius:8px;padding:11px 13px;font-family:var(--font-mono);font-size:11px;color:var(--text-muted);line-height:1.9;border:1px solid var(--border);}
+.kw{color:var(--brand);}
+.fn{color:#5bbfcc;}
+.sql-meta{font-size:10px;color:var(--brand);margin-top:7px;font-family:var(--font-mono);}
+.llm-tag{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-family:var(--font-mono);background:rgba(8,165,187,0.1);color:var(--brand-deep);margin-bottom:8px;}
+.result-table-wrap{overflow-x:auto;margin-top:10px;border-radius:7px;border:1px solid rgba(8,146,165,0.15);}
+.result-table{width:100%;border-collapse:collapse;font-size:11px;font-family:var(--font-mono);table-layout:auto;}
+.result-table th{padding:5px 10px;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:#6ab4c0;border-bottom:1px solid rgba(8,146,165,0.2);white-space:nowrap;}
+.result-table td{padding:5px 10px;border-bottom:1px solid rgba(8,146,165,0.08);color:#0a2c35;white-space:nowrap;}
+.result-table tr:hover td{background:rgba(8,165,187,0.04);}
+.chat-chart-wrap{margin-top:12px;border:1px solid rgba(8,146,165,0.15);border-radius:10px;padding:12px;background:#f7fcfd;position:relative;height:200px;}
+.typing-row{display:flex;gap:10px;align-items:flex-start;}
+.typing-bub{background:#fff;border:1px solid var(--chat-border);border-radius:3px 13px 13px 13px;padding:10px 14px;display:flex;align-items:center;gap:5px;}
+.dot{width:5px;height:5px;border-radius:50%;background:var(--brand);animation:bob 1.2s ease-in-out infinite;}
+.dot:nth-child(2){animation-delay:0.2s;}
+.dot:nth-child(3){animation-delay:0.4s;}
+@keyframes bob{0%,80%,100%{transform:translateY(0);opacity:0.3}40%{transform:translateY(-5px);opacity:1}}
+.error-bubble{color:#c0392b;font-size:11.5px;font-family:var(--font-mono);padding:8px 10px;background:rgba(192,57,43,0.06);border:1px solid rgba(192,57,43,0.15);border-radius:6px;margin-top:6px;}
+.input-wrap{flex-shrink:0;background:#fff;border-top:1px solid rgba(8,146,165,0.12);padding:12px 16px 14px;}
+.chips{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;}
+.chip{font-size:10.5px;padding:4px 11px;border-radius:20px;border:1px solid rgba(8,146,165,0.25);color:var(--brand-deep);cursor:pointer;background:rgba(8,165,187,0.05);transition:all 0.15s;}
+.chip:hover{background:rgba(8,165,187,0.12);border-color:rgba(8,165,187,0.45);}
+.input-row{display:flex;gap:8px;align-items:center;}
+.chat-inp{flex:1;background:#f4fafb;border:1px solid rgba(8,146,165,0.25);border-radius:10px;padding:10px 14px;font-size:13px;color:#0a2c35;outline:none;font-family:var(--font-body);transition:all 0.15s;}
+.chat-inp:focus{border-color:var(--brand);background:#fff;box-shadow:0 0 0 3px rgba(8,165,187,0.08);}
+.chat-inp::placeholder{color:var(--text-muted);opacity:0.6;}
+.send-btn{width:36px;height:36px;border-radius:9px;background:var(--brand-dim);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;}
+.send-btn:hover{background:var(--brand-deep);box-shadow:0 0 12px rgba(8,165,187,0.3);}
+.send-btn:disabled{opacity:0.4;cursor:not-allowed;}
+
+/* ── MAP ── */
+.map-controls{padding:10px 16px;background:var(--deep);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.ctrl-label{font-size:10px;color:var(--text-muted);font-family:var(--font-mono);}
+.ctrl-select{background:var(--surface);border:1px solid var(--border);color:var(--text-primary);border-radius:6px;padding:5px 9px;font-size:11.5px;outline:none;cursor:pointer;}
+.ctrl-btn{padding:5px 12px;border-radius:6px;border:1px solid var(--border-bright);background:rgba(8,165,187,0.08);color:var(--brand);font-size:11.5px;cursor:pointer;transition:all 0.15s;}
+.ctrl-btn:hover{background:rgba(8,165,187,0.15);}
+.map-panel-wrap{flex:1;display:flex;flex-direction:column;position:relative;overflow:hidden;}
+#leaflet-map{flex:1;width:100%;min-height:0;}
+.map-stats-overlay{position:absolute;top:12px;left:12px;z-index:999;display:flex;gap:8px;pointer-events:none;}
+.map-stat{background:rgba(1,14,20,0.88);border:1px solid var(--border);border-radius:7px;padding:6px 10px;backdrop-filter:blur(6px);}
+.ms-val{font-size:14px;font-weight:600;color:var(--brand);font-family:var(--font-head);}
+.ms-key{font-size:8.5px;color:var(--text-muted);font-family:var(--font-mono);margin-top:1px;}
+.leaflet-popup-content-wrapper{background:var(--mid)!important;border:1px solid var(--border-bright)!important;border-radius:9px!important;box-shadow:0 8px 24px rgba(0,0,0,0.5)!important;}
+.leaflet-popup-content{color:var(--text-primary)!important;font-family:var(--font-mono);font-size:11px;}
+.leaflet-popup-tip{background:var(--mid)!important;}
+.lp-id{color:var(--brand);font-size:10px;margin-bottom:5px;}
+.lp-row{display:flex;justify-content:space-between;gap:16px;margin-top:3px;}
+.lp-k{color:var(--text-muted);font-size:10px;}
+.lp-v{color:var(--text-primary);font-size:10px;}
+
+/* ── ANALYSIS PANELS ── */
+.analysis-panel{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px;}
+.analysis-panel::-webkit-scrollbar{width:4px;}
+.analysis-panel::-webkit-scrollbar-thumb{background:rgba(8,146,165,0.15);border-radius:4px;}
+.panel-row{display:flex;gap:16px;flex-wrap:wrap;}
+.analysis-card{background:#fff;border:1px solid rgba(8,146,165,0.14);border-radius:12px;padding:16px 18px;flex:1;min-width:270px;box-shadow:0 2px 10px rgba(8,146,165,0.05);animation:fadeup 0.3s ease both;}
+.card-title{font-family:var(--font-head);font-size:13px;font-weight:600;color:#0a2c35;margin-bottom:4px;}
+.card-sub{font-size:10.5px;color:var(--brand-dim);font-family:var(--font-mono);margin-bottom:12px;}
+.card-chart{height:180px;position:relative;}
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
+.stat-box{background:rgba(8,165,187,0.05);border:1px solid rgba(8,165,187,0.15);border-radius:9px;padding:12px 14px;text-align:center;}
+.stat-val{font-size:22px;font-weight:700;color:var(--brand-deep);font-family:var(--font-head);}
+.stat-key{font-size:9.5px;color:#6ab4c0;font-family:var(--font-mono);margin-top:3px;text-transform:uppercase;letter-spacing:0.4px;}
+.filter-bar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center;}
+.filter-input{background:#f4fafb;border:1px solid rgba(8,146,165,0.25);border-radius:6px;padding:5px 9px;font-size:11.5px;color:#0a2c35;outline:none;}
+.filter-input:focus{border-color:var(--brand);}
+.thermo-band{background:linear-gradient(90deg,rgba(8,165,187,0.08),rgba(8,165,187,0.02));border-left:3px solid var(--brand);border-radius:0 8px 8px 0;padding:9px 12px;margin:8px 0;}
+.thermo-depth{font-family:var(--font-head);font-size:20px;font-weight:700;color:var(--brand-deep);}
+.thermo-label{font-size:9.5px;color:#6ab4c0;font-family:var(--font-mono);margin-top:2px;}
+
+/* OHC cards */
+.ohc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;}
+.ohc-card{border-radius:10px;padding:14px 16px;text-align:center;}
+.ohc-card.total{background:linear-gradient(135deg,rgba(8,165,187,0.12),rgba(8,165,187,0.06));border:1px solid rgba(8,165,187,0.3);}
+.ohc-card.surface{background:rgba(255,220,100,0.08);border:1px solid rgba(255,200,0,0.2);}
+.ohc-card.mixed{background:rgba(91,191,204,0.08);border:1px solid rgba(91,191,204,0.25);}
+.ohc-card.deep{background:rgba(6,14,26,0.06);border:1px solid rgba(8,146,165,0.2);}
+.ohc-val{font-size:20px;font-weight:700;font-family:var(--font-head);color:var(--brand-deep);}
+.ohc-unit{font-size:9px;font-family:var(--font-mono);color:#6ab4c0;margin-top:2px;text-transform:uppercase;letter-spacing:.5px;}
+.ohc-layer{font-size:9.5px;font-family:var(--font-mono);color:#3a7090;margin-top:4px;}
+
+/* Data Table */
+.data-table-wrap{overflow:auto;background:#fff;border-radius:10px;border:1px solid rgba(8,146,165,0.14);max-height:100%;}
+.data-table{width:100%;border-collapse:collapse;font-size:11.5px;table-layout:auto;}
+.data-table th{text-align:left;padding:7px 14px;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);font-family:var(--font-mono);border-bottom:1px solid var(--border);background:var(--deep);white-space:nowrap;position:sticky;top:0;z-index:2;}
+.data-table td{padding:8px 14px;border-bottom:1px solid rgba(8,146,165,0.07);color:#1a3a42;font-family:var(--font-body);white-space:nowrap;}
+.data-table tr:hover td{background:rgba(8,165,187,0.04);}
+.data-table .mono{font-family:var(--font-mono);color:var(--brand-deep);}
+.badge{display:inline-block;font-size:9px;padding:2px 7px;border-radius:10px;font-family:var(--font-mono);}
+.badge.incois{background:rgba(8,165,187,0.1);color:var(--brand-deep);}
+.badge.coriolis{background:rgba(80,180,120,0.1);color:#1a7a4a;}
+.badge.csiro{background:rgba(160,100,200,0.1);color:#6a3490;}
+.pagination{display:flex;align-items:center;gap:8px;margin-top:14px;font-size:12px;color:#6ab4c0;font-family:var(--font-mono);}
+.page-btn{background:#f4fafb;border:1px solid rgba(8,146,165,0.2);border-radius:5px;padding:5px 11px;color:var(--brand-deep);cursor:pointer;font-size:12px;transition:all 0.2s;}
+.page-btn:hover{border-color:var(--brand);color:var(--brand);}
+.page-btn:disabled{opacity:0.3;cursor:not-allowed;}
+
+.shap-bar{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
+.shap-feature{font-size:12px;font-family:var(--font-mono);color:var(--brand-deep);width:90px;flex-shrink:0;}
+.shap-track{flex:1;background:rgba(8,165,187,0.06);border-radius:4px;height:24px;overflow:hidden;}
+.shap-fill{height:100%;border-radius:4px;display:flex;align-items:center;padding:0 8px;transition:width .6s cubic-bezier(.4,0,.2,1);}
+.shap-fill.pos{background:rgba(8,165,187,0.6);}
+.shap-fill.neg{background:rgba(192,57,43,0.55);}
+.shap-val{font-size:10px;font-family:var(--font-mono);color:#fff;font-weight:500;}
+.shap-explain{font-size:11.5px;color:#0a2c35;line-height:1.6;margin-top:14px;padding:12px 14px;background:rgba(8,165,187,0.05);border-radius:6px;border-left:3px solid var(--brand);}
+.depth-bar-wrap{display:flex;gap:8px;align-items:flex-end;height:120px;margin-top:8px;}
+.depth-bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;}
+.depth-bar{border-radius:4px 4px 0 0;width:100%;min-height:4px;}
+.depth-bar-label{font-size:9px;color:#6ab4c0;font-family:var(--font-mono);text-align:center;}
+
+*::-webkit-scrollbar{width:4px;height:4px;}
+*::-webkit-scrollbar-track{background:transparent;}
+*::-webkit-scrollbar-thumb{background:rgba(8,146,165,0.15);border-radius:4px;}
+@media(max-width:768px){.sidebar{display:none;}.stats-grid,.ohc-grid{grid-template-columns:1fr 1fr;}}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- ═══ SIDEBAR ═══ -->
+<div class="sidebar">
+  <svg class="sb-wave" viewBox="0 0 230 200" preserveAspectRatio="none">
+    <path d="M0 80 Q30 60 65 80 Q100 100 135 76 Q165 58 200 74 Q218 83 230 70 L230 200 L0 200Z" fill="rgba(8,146,165,0.04)"/>
+    <path d="M0 106 Q35 90 75 106 Q115 122 150 100 Q178 84 230 100 L230 200 L0 200Z" fill="rgba(8,146,165,0.06)"/>
+    <path d="M0 130 Q40 116 85 130 Q130 144 168 124 Q195 112 230 124 L230 200 L0 200Z" fill="rgba(8,146,165,0.08)"/>
+    <path d="M0 152 Q44 140 92 152 Q140 164 178 148 Q202 138 230 148 L230 200 L0 200Z" fill="rgba(8,146,165,0.11)"/>
+    <path d="M0 172 Q46 162 96 172 Q146 182 182 168 Q206 160 230 168 L230 200 L0 200Z" fill="rgba(8,146,165,0.14)"/>
+  </svg>
+  <div class="sb-inner">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg width="17" height="17" viewBox="0 0 17 17" fill="none">
+          <path d="M2 12 Q5 7 8.5 10 Q12 13 15 8" stroke="#d4eef2" stroke-width="1.7" stroke-linecap="round" fill="none"/>
+          <path d="M2 14.5 Q5 11 8.5 12.5 Q12 14 15 11.5" stroke="rgba(212,238,242,0.5)" stroke-width="1.1" stroke-linecap="round" fill="none"/>
+          <circle cx="8.5" cy="5" r="2" fill="rgba(212,238,242,0.2)" stroke="rgba(212,238,242,0.5)" stroke-width="1"/>
+        </svg>
+      </div>
+      <span class="logo-name">BlueQuery</span>
+      <span class="logo-badge">v3.0</span>
+    </div>
+    <div class="nav-scroll">
+      <div class="nav-label">Workspace</div>
+      <div class="nav-item active" onclick="switchTab('chat')"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 2.5h10v7h-4l-2.5 2-0.5-2H1.5z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round" fill="none"/></svg>Query Chat</div>
+      <div class="nav-item" onclick="switchTab('map')"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="5.5" r="3.5" stroke="currentColor" stroke-width="1.1" fill="none"/><path d="M6.5 9v3" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>Float Map</div>
+      <div class="nav-item" onclick="switchTab('analysis')"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 10.5L4 7l2 1.5 3-4.5 2.5 2" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>Analysis</div>
+      <div class="nav-item" onclick="switchTab('thermo')"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 8.5 Q4 4 6.5 6 Q9 8 11 5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" fill="none"/><line x1="1.5" y1="8.5" x2="11.5" y2="8.5" stroke="currentColor" stroke-width="0.8" stroke-dasharray="2 1.5" opacity="0.5"/></svg>Thermocline</div>
+      <div class="nav-item" onclick="switchTab('depth')"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1.5v10M4 5l2.5-3.5L9 5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>Depth Profile</div>
+      <div class="nav-item" onclick="switchTab('timeseries')"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 9 Q3 6 5 7 Q7 8 9 5 Q10.5 3 11.5 4.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" fill="none"/></svg>Time Series</div>
+      <div class="nav-item" onclick="switchTab('ohc')"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 10 Q4 6 6.5 8 Q9 10 11 6" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" fill="none"/><circle cx="6.5" cy="3.5" r="1.5" stroke="currentColor" stroke-width="1.1" fill="none"/></svg>Ocean Heat Content</div>
+      <div class="nav-item" onclick="switchTab('shap')"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" stroke-width="1.1" fill="none"/><path d="M4.5 6.5h4M6.5 4.5v4" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>XAI / SHAP</div>
+      <div class="nav-item" onclick="switchTab('data')"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1.5" y="2" width="10" height="9" rx="1.5" stroke="currentColor" stroke-width="1.1" fill="none"/><line x1="1.5" y1="5" x2="11.5" y2="5" stroke="currentColor" stroke-width="0.8" opacity="0.5"/><line x1="5" y1="5" x2="5" y2="11" stroke="currentColor" stroke-width="0.8" opacity="0.5"/></svg>Data Explorer</div>
+      <div class="nav-label">Databases</div>
+      <div class="db-item"><div class="db-dot live"></div><div class="db-info"><div class="db-name">argo_profiles</div><div class="db-status-txt" id="db-rows-count">checking…</div></div></div>
+      <div class="db-item"><div class="db-dot live"></div><div class="db-info"><div class="db-name">RDS PostgreSQL</div><div class="db-status-txt">eu-north-1</div></div></div>
+      <div class="db-item"><div class="db-dot off"></div><div class="db-info"><div class="db-name">wod_archive</div><div class="db-status-txt off">Not connected</div></div></div>
+      <div class="nav-label">AI Models</div>
+      <div class="llm-section">
+        <div class="llm-badge"><div class="llm-dot" id="dot-anthropic"></div>Claude (Anthropic)</div>
+        <div class="llm-badge"><div class="llm-dot" id="dot-gemini"></div>Gemini</div>
+        <div class="llm-badge"><div class="llm-dot" id="dot-grok"></div>Groq / Grok</div>
+      </div>
+      <div style="height:12px;"></div>
+    </div>
+    <div class="sb-footer">
+      <div class="avatar">K</div>
+      <div><div class="sb-footer-name">BlueQuery-Admin
+      </div><div class="sb-footer-role">Ocean Researcher</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MAIN ═══ -->
+<div class="main">
+  <div class="topbar">
+    <svg class="topbar-wave" viewBox="0 0 900 58" preserveAspectRatio="none">
+      <path d="M0 30 Q60 18 130 30 Q200 42 280 22 Q360 4 440 26 Q520 46 600 24 Q680 4 760 22 Q830 36 900 20 L900 58 L0 58Z" fill="rgba(8,146,165,0.05)"/>
+      <path d="M0 40 Q70 28 150 40 Q230 52 310 34 Q390 16 470 36 Q550 54 630 34 Q710 16 790 32 Q860 44 900 30 L900 58 L0 58Z" fill="rgba(8,146,165,0.07)"/>
+    </svg>
+    <div class="topbar-content">
+      <div><div class="topbar-title" id="topbar-title">Query Chat</div><div class="topbar-sub" id="topbar-sub">argo_profiles · loading…</div></div>
+      <div class="topbar-right">
+        <div class="status-pill" id="rds-pill"><span class="status-dot"></span>RDS Connecting…</div>
+        <div class="status-pill" id="api-pill" style="border-color:rgba(80,180,120,0.4);color:#2a9d5c;background:rgba(42,157,92,0.07);"><span class="status-dot" style="background:#2a9d5c;box-shadow:0 0 5px #2a9d5c;"></span>API Live</div>
+      </div>
+    </div>
+  </div>
+  <div class="tabbar">
+    <div class="tab active" id="tab-chat" onclick="switchTab('chat')">💬 AI Query</div>
+    <div class="tab" id="tab-map" onclick="switchTab('map')">🗺 Float Map</div>
+    <div class="tab" id="tab-analysis" onclick="switchTab('analysis')">📊 Analysis</div>
+    <div class="tab" id="tab-thermo" onclick="switchTab('thermo')">🌡 Thermocline</div>
+    <div class="tab" id="tab-depth" onclick="switchTab('depth')">📉 Depth Profile</div>
+    <div class="tab" id="tab-timeseries" onclick="switchTab('timeseries')">📈 Time Series</div>
+    <div class="tab" id="tab-ohc" onclick="switchTab('ohc')">🔥 Ocean Heat</div>
+    <div class="tab" id="tab-shap" onclick="switchTab('shap')">🧠 XAI / SHAP</div>
+    <div class="tab" id="tab-data" onclick="switchTab('data')">🗄 Data Table</div>
+  </div>
+  <div class="panels">
+
+    <!-- ══ CHAT ══ -->
+    <div class="panel active" id="panel-chat">
+      <div class="chat-area" id="chat-area">
+        <div class="msg-row">
+          <div class="msg-av ai"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 9 Q4 4.5 6.5 7 Q9 9.5 11.5 5.5" stroke="#08a5bb" stroke-width="1.4" stroke-linecap="round" fill="none"/></svg></div>
+          <div class="bubble ai">Connecting to <strong style="color:#056070;">RDS PostgreSQL</strong>… Ask anything about ocean data. I'll generate SQL, run it, and visualize results automatically when relevant.</div>
+        </div>
+      </div>
+      <div class="input-wrap">
+        <div class="chips">
+          <div class="chip" onclick="fillAndSend('Show thermocline for float 1902669')">Thermocline analysis</div>
+          <div class="chip" onclick="fillAndSend('Plot monthly average temperature in Bay of Bengal')">Monthly temp chart</div>
+          <div class="chip" onclick="fillAndSend('Average salinity in Arabian Sea 2023')">Arabian Sea salinity</div>
+          <div class="chip" onclick="fillAndSend('Which data center has the most observations')">Float counts by center</div>
+          <div class="chip" onclick="fillAndSend('Show temperature vs depth profile for float 1902669')">Depth profile chart</div>
+          <div class="chip" onclick="fillAndSend('Ocean heat content for float 1902669 cycle 2')">Ocean heat content</div>
+        </div>
+        <div class="input-row">
+          <input class="chat-inp" id="chat-inp" type="text" placeholder="Ask anything — I'll generate charts automatically for plot/graph requests…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){sendQuery();event.preventDefault();}"/>
+          <button class="send-btn" id="send-btn" onclick="sendQuery()">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7l10-5-5 10V7H2z" fill="#fff"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ MAP ══ -->
+    <div class="panel" id="panel-map">
+      <div class="map-controls">
+        <span class="ctrl-label">Data Center</span>
+        <select class="ctrl-select" id="mapCenter"><option value="">All Centers</option><option value="incois">INCOIS</option><option value="coriolis">Coriolis</option><option value="csiro">CSIRO</option></select>
+        <button class="ctrl-btn" onclick="reloadMap()">Apply</button>
+        <span id="map-loading" style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);"></span>
+      </div>
+      <div class="map-panel-wrap">
+        <div class="map-stats-overlay">
+          <div class="map-stat"><div class="ms-val" id="ms-total">—</div><div class="ms-key">Total Floats</div></div>
+          <div class="map-stat"><div class="ms-val" id="ms-incois" style="color:#08a5bb;">—</div><div class="ms-key">INCOIS</div></div>
+          <div class="map-stat"><div class="ms-val" id="ms-coriolis" style="color:#5bbfcc;">—</div><div class="ms-key">Coriolis</div></div>
+          <div class="map-stat"><div class="ms-val" id="ms-csiro" style="color:#a8dce8;">—</div><div class="ms-key">CSIRO</div></div>
+        </div>
+        <div id="leaflet-map"></div>
+      </div>
+    </div>
+
+    <!-- ══ ANALYSIS ══ -->
+    <div class="panel" id="panel-analysis">
+      <div class="overview-bar">
+        <span class="ov-label">SCOPE:</span>
+        <select class="ov-select" id="a-scope" onchange="onScopeChange('analysis')"><option value="all">All Data Centers</option><option value="incois">INCOIS</option><option value="coriolis">Coriolis</option><option value="csiro">CSIRO</option></select>
+        <div class="ov-divider"></div>
+        <span class="ov-label">REGION:</span>
+        <input class="filter-input" id="aLatMin" value="6" style="width:70px" placeholder="Lat Min"/>
+        <input class="filter-input" id="aLatMax" value="22" style="width:70px" placeholder="Lat Max"/>
+        <input class="filter-input" id="aLonMin" value="80" style="width:70px" placeholder="Lon Min"/>
+        <input class="filter-input" id="aLonMax" value="100" style="width:70px" placeholder="Lon Max"/>
+        <button class="ov-btn" onclick="chartsInited.analysis=false;loadAnalysis()">Analyze</button>
+      </div>
+      <div class="analysis-panel">
+        <div class="stats-grid" id="region-stats"><div class="stat-box"><div class="stat-val">—</div><div class="stat-key">Loading…</div></div></div>
+        <div class="panel-row">
+          <div class="analysis-card" style="flex:1.5;">
+            <div class="card-title">Temperature Distribution</div>
+            <div class="card-sub" id="analysis-subtitle">Bay of Bengal · all centers</div>
+            <div class="card-chart"><canvas id="chart-temp-dist"></canvas></div>
+          </div>
+          <div class="analysis-card">
+            <div class="card-title">Data Center Distribution</div>
+            <div class="card-sub">Observations by source</div>
+            <div class="card-chart"><canvas id="chart-centers"></canvas></div>
+          </div>
+        </div>
+        <div class="panel-row">
+          <div class="analysis-card">
+            <div class="card-title">Surface Temperature by Center</div>
+            <div class="card-sub">Avg temp (depth &lt; 10m) per data center</div>
+            <div class="card-chart"><canvas id="chart-center-temp"></canvas></div>
+          </div>
+          <div class="analysis-card">
+            <div class="card-title">Surface Salinity by Center</div>
+            <div class="card-sub">Avg salinity (depth &lt; 10m) per data center</div>
+            <div class="card-chart"><canvas id="chart-center-sal"></canvas></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ THERMOCLINE ══ -->
+    <div class="panel" id="panel-thermo">
+      <div class="overview-bar">
+        <span class="ov-label">VIEW:</span>
+        <select class="ov-select" id="tc-scope" onchange="onTcScopeChange()"><option value="float">Single Float</option><option value="center">By Data Center</option></select>
+        <div class="ov-divider" id="tc-center-div"></div>
+        <select class="ov-select" id="tc-center-sel" style="display:none;" onchange="loadTcCenter()"><option value="incois">INCOIS</option><option value="coriolis">Coriolis</option><option value="csiro">CSIRO</option></select>
+        <div class="ov-divider"></div>
+        <span class="ov-label" id="tc-float-lbl">FLOAT:</span>
+        <input class="filter-input" id="tc-float" value="1902669" style="width:120px" placeholder="Float ID"/>
+        <span class="ov-label">CYCLE:</span>
+        <input class="filter-input" id="tc-cycle" value="1" style="width:60px" placeholder="Cycle"/>
+        <button class="ov-btn" onclick="chartsInited.thermo=false;loadThermo()">Load</button>
+        <span id="tc-info" style="font-size:10.5px;color:var(--brand-dim);font-family:var(--font-mono);"></span>
+      </div>
+      <div class="analysis-panel">
+        <div class="panel-row">
+          <div class="analysis-card" style="flex:1.5;">
+            <div class="card-title">Thermocline Detection — dT/dz Method</div>
+            <div class="card-sub" id="tc-subtitle">Float 1902669 · Cycle 1</div>
+            <div class="thermo-band"><div class="thermo-depth" id="tc-depth">—</div><div class="thermo-label">Thermocline depth · max temperature gradient zone</div></div>
+            <div class="card-chart" style="height:220px;"><canvas id="chart-thermo"></canvas></div>
+          </div>
+          <div class="analysis-card">
+            <div class="card-title">Layer Analysis</div>
+            <div class="card-sub">Vertical ocean structure</div>
+            <div id="tc-layers" style="display:flex;flex-direction:column;gap:10px;margin-top:8px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ DEPTH PROFILE ══ -->
+    <div class="panel" id="panel-depth">
+      <div class="overview-bar">
+        <span class="ov-label">VIEW:</span>
+        <select class="ov-select" id="dp-scope" onchange="onDpScopeChange()"><option value="float">Single Float</option><option value="center">By Data Center (avg)</option></select>
+        <div class="ov-divider"></div>
+        <select class="ov-select" id="dp-center-sel" style="display:none;" onchange="loadDpCenter()"><option value="incois">INCOIS</option><option value="coriolis">Coriolis</option><option value="csiro">CSIRO</option></select>
+        <input class="filter-input" id="dp-float" value="1902669" style="width:120px" placeholder="Float ID"/>
+        <input class="filter-input" id="dp-cycle" value="1" style="width:60px" placeholder="Cycle"/>
+        <button class="ov-btn" onclick="chartsInited.depth=false;loadDepth()">Load</button>
+      </div>
+      <div class="analysis-panel">
+        <div class="panel-row">
+          <div class="analysis-card" style="flex:1.2;">
+            <div class="card-title">Temperature & Salinity vs Depth</div>
+            <div class="card-sub" id="dp-subtitle">Dual axis profile</div>
+            <div class="card-chart" style="height:240px;"><canvas id="chart-depth-dual"></canvas></div>
+          </div>
+          <div class="analysis-card">
+            <div class="card-title">Depth-wise Observation Density</div>
+            <div class="card-sub">Obs count by depth band</div>
+            <div class="depth-bar-wrap" id="depth-bars"></div>
+            <div style="display:flex;justify-content:space-between;font-size:9px;color:#6ab4c0;font-family:var(--font-mono);margin-top:4px;"><span>0m</span><span>500m</span><span>1000m</span><span>2000m</span><span>4000m</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ TIME SERIES ══ -->
+    <div class="panel" id="panel-timeseries">
+      <div class="overview-bar">
+        <span class="ov-label">REGION:</span>
+        <input class="filter-input" id="ts-lat-min" value="6" style="width:70px" placeholder="Lat Min"/>
+        <input class="filter-input" id="ts-lat-max" value="22" style="width:70px" placeholder="Lat Max"/>
+        <input class="filter-input" id="ts-lon-min" value="80" style="width:70px" placeholder="Lon Min"/>
+        <input class="filter-input" id="ts-lon-max" value="100" style="width:70px" placeholder="Lon Max"/>
+        <button class="ov-btn" onclick="chartsInited.ts=false;loadTimeseries()">Load</button>
+      </div>
+      <div class="analysis-panel">
+        <div class="analysis-card">
+          <div class="card-title">Monthly Temperature & Salinity Time Series</div>
+          <div class="card-sub">Surface observations (depth &lt; 10m)</div>
+          <div class="card-chart" style="height:240px;"><canvas id="chart-timeseries"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ OCEAN HEAT CONTENT ══ -->
+    <div class="panel" id="panel-ohc">
+      <div class="overview-bar">
+        <span class="ov-label">FLOAT:</span>
+        <input class="filter-input" id="ohc-float" value="1902669" style="width:120px" placeholder="Float ID"/>
+        <span class="ov-label">CYCLE:</span>
+        <input class="filter-input" id="ohc-cycle" value="1" style="width:60px" placeholder="Cycle"/>
+        <span class="ov-label">DEPTH MAX:</span>
+        <input class="filter-input" id="ohc-depth" value="700" style="width:70px" placeholder="700"/>
+        <button class="ov-btn" onclick="chartsInited.ohc=false;loadOhc()">Compute OHC</button>
+        <span id="ohc-info" style="font-size:10.5px;color:var(--brand-dim);font-family:var(--font-mono);"></span>
+      </div>
+      <div class="analysis-panel">
+        <div class="ohc-grid" id="ohc-cards">
+          <div class="ohc-card total"><div class="ohc-val">—</div><div class="ohc-unit">MJ/m²</div><div class="ohc-layer">Total OHC</div></div>
+          <div class="ohc-card surface"><div class="ohc-val">—</div><div class="ohc-unit">MJ/m²</div><div class="ohc-layer">0–100m Surface</div></div>
+          <div class="ohc-card mixed"><div class="ohc-val">—</div><div class="ohc-unit">MJ/m²</div><div class="ohc-layer">100–300m Mixed</div></div>
+          <div class="ohc-card deep"><div class="ohc-val">—</div><div class="ohc-unit">MJ/m²</div><div class="ohc-layer">300m+ Deep</div></div>
+        </div>
+        <div class="panel-row">
+          <div class="analysis-card" style="flex:1.5;">
+            <div class="card-title">OHC Depth Profile — Temperature Contribution</div>
+            <div class="card-sub" id="ohc-subtitle">Float 1902669 · integrated heat per layer</div>
+            <div class="card-chart" style="height:260px;"><canvas id="chart-ohc-profile"></canvas></div>
+          </div>
+          <div class="analysis-card">
+            <div class="card-title">Layer Heat Distribution</div>
+            <div class="card-sub">OHC breakdown by depth zone</div>
+            <div class="card-chart" style="height:260px;"><canvas id="chart-ohc-pie"></canvas></div>
+          </div>
+        </div>
+        <div class="analysis-card">
+          <div class="card-title">OHC Methodology</div>
+          <div class="card-sub">Formula: OHC = ρ × Cp × ∫T(z) dz</div>
+          <div style="font-size:11.5px;color:#0a2c35;line-height:1.7;margin-top:8px;">
+            Ocean Heat Content (OHC) quantifies the thermal energy stored in the water column. We use the standard formula:
+            <strong style="color:var(--brand-deep);">OHC = ρ × Cp × ∫T(z) dz</strong>, where ρ = 1025 kg/m³ (seawater density),
+            Cp = 3985 J/kg/°C (specific heat). The integral is computed numerically using the trapezoidal rule over
+            depth levels from the Argo float profile. Results are expressed in MJ/m². The thermocline depth shown
+            marks the maximum temperature gradient (dT/dz), separating the surface mixed layer from the thermocline zone.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ SHAP ══ -->
+    <div class="panel" id="panel-shap">
+      <div class="overview-bar">
+        <span class="ov-label">FLOAT:</span>
+        <input class="filter-input" id="shap-float" value="1902669" style="width:120px" placeholder="Float ID"/>
+        <span class="ov-label">CYCLE:</span>
+        <input class="filter-input" id="shap-cycle" value="1" style="width:60px" placeholder="Cycle"/>
+        <button class="ov-btn" onclick="chartsInited.shap=false;loadShap()">Analyze</button>
+        <span id="shap-info" style="font-size:10.5px;color:var(--brand-dim);font-family:var(--font-mono);"></span>
+      </div>
+      <div class="analysis-panel">
+        <div class="panel-row">
+          <div class="analysis-card" style="flex:1.2;">
+            <div class="card-title">SHAP Feature Importance — Temperature Prediction</div>
+            <div class="card-sub">Linear regression SHAP approximation · real float data</div>
+            <div id="shap-bars"></div>
+            <div class="shap-explain" id="shap-explain" style="display:none;"></div>
+          </div>
+          <div class="analysis-card">
+            <div class="card-title">Contribution Chart</div>
+            <div class="card-sub">Feature impact on temperature</div>
+            <div class="card-chart"><canvas id="chart-shap"></canvas></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ DATA TABLE ══ -->
+    <div class="panel" id="panel-data">
+      <div class="overview-bar">
+        <span class="ov-label">FLOAT:</span>
+        <input class="filter-input" id="tbl-float" placeholder="Float ID" style="width:120px"/>
+        <span class="ov-label">CENTER:</span>
+        <select class="ov-select" id="tbl-center"><option value="">All</option><option value="incois">INCOIS</option><option value="coriolis">Coriolis</option><option value="csiro">CSIRO</option></select>
+        <button class="ov-btn" onclick="tableOffset=0;loadTable()">Search</button>
+      </div>
+      <div class="analysis-panel">
+        <div class="data-table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Float ID</th><th>Center</th><th>Cycle</th><th>Timestamp</th><th>Latitude</th><th>Longitude</th><th>Depth (m)</th><th>Temp (°C)</th><th>Salinity (PSU)</th></tr></thead>
+            <tbody id="tbl-body"><tr><td colspan="9" style="text-align:center;color:#6ab4c0;padding:20px;font-family:'DM Mono',monospace;">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="tbl-pagination"></div>
+      </div>
+    </div>
+
+  </div><!-- panels -->
+</div><!-- main -->
+</div><!-- shell -->
+
+<script>
+const API = 'Enter your API endpoint here';
+let tableOffset=0, chatChartCounter=0;
+let chartsInited={};
+let shapChartInst=null,thermoChartInst=null,depthChartInst=null,tsChartInst=null;
+let tempDistChartInst=null,centersChartInst=null,centerTempInst=null,centerSalInst=null;
+let ohcProfileInst=null,ohcPieInst=null;
+let leafletMap=null, leafletMarkers=null;
+
+const chartBase={
+  plugins:{legend:{labels:{color:'#3a6070',font:{family:"'DM Mono',monospace",size:10}}}},
+  scales:{
+    x:{ticks:{color:'#6ab4c0',font:{family:"'DM Mono',monospace",size:9}},grid:{color:'rgba(8,146,165,0.07)'},border:{color:'transparent'}},
+    y:{ticks:{color:'#6ab4c0',font:{family:"'DM Mono',monospace",size:9}},grid:{color:'rgba(8,146,165,0.07)'},border:{color:'transparent'}}
+  },responsive:true,maintainAspectRatio:false
+};
+
+const tabMeta={
+  chat:['Query Chat','argo_profiles · ask in plain English · charts auto-generated'],
+  map:['Float Map','Real-time positions · Leaflet · Indian Ocean'],
+  analysis:['Ocean Analysis','Regional stats · by data center or all'],
+  thermo:['Thermocline','dT/dz method · single float or data center average'],
+  depth:['Depth Profile','Temp & salinity vs depth · single float or center average'],
+  timeseries:['Time Series','Monthly aggregation · surface observations'],
+  ohc:['Ocean Heat Content','OHC = ρ × Cp × ∫T(z)dz · layer breakdown'],
+  shap:['Explainable AI / SHAP','Feature importance for temperature prediction'],
+  data:['Data Explorer','Row-level browser · argo_profiles · paginated']
+};
+
+function switchTab(id){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab,.nav-item').forEach(t=>t.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  const tab=document.getElementById('tab-'+id);
+  if(tab) tab.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>{
+    if(n.getAttribute('onclick')&&n.getAttribute('onclick').includes("'"+id+"'")) n.classList.add('active');
+  });
+  const [title,sub]=tabMeta[id]||[id,''];
+  document.getElementById('topbar-title').textContent=title;
+  document.getElementById('topbar-sub').textContent=sub;
+  if(id==='map'){initLeafletMap();loadMap();}
+  if(id==='analysis') loadAnalysis();
+  if(id==='thermo')   loadThermo();
+  if(id==='depth')    loadDepth();
+  if(id==='timeseries') loadTimeseries();
+  if(id==='ohc')      loadOhc();
+  if(id==='shap')     loadShap();
+  if(id==='data')     {tableOffset=0;loadTable();}
+}
+
+// ── Status ────────────────────────────────────────────────────
+async function checkStatus(){
+  try{
+    const r=await fetch(`${API}/health`); const d=await r.json();
+    if(d.status==='ok'){
+      const s=Number(d.db_rows).toLocaleString()+' rows';
+      document.getElementById('db-rows-count').textContent=s;
+      document.getElementById('topbar-sub').textContent=`argo_profiles · ${s} · 717 floats`;
+      document.getElementById('rds-pill').innerHTML='<span class="status-dot"></span>RDS Connected';
+      const fb=document.querySelector('.bubble.ai');
+      if(fb) fb.innerHTML=`Connected to <strong style="color:#056070;">RDS PostgreSQL</strong> — <strong style="color:#056070;">${s}</strong> across 717 floats from INCOIS, Coriolis &amp; CSIRO.<br><br>Ask anything in plain English. <strong>Include words like "chart", "plot", or "graph"</strong> to get automatic visualizations.`;
+    }
+  }catch(e){
+    document.getElementById('rds-pill').innerHTML='<span style="width:5px;height:5px;border-radius:50%;background:#c0392b;display:inline-block;margin-right:4px;"></span>API Offline';
+  }
+  try{
+    const r=await fetch(`${API}/llm-status`); const d=await r.json();
+    setDot('anthropic',d.anthropic?.includes('✅'));
+    setDot('gemini',d.gemini?.includes('✅'));
+    setDot('grok',d.grok?.includes('✅'));
+  }catch(e){}
+}
+function setDot(id,ok){const el=document.getElementById('dot-'+id);if(el)el.className='llm-dot '+(ok?'ok':'err');}
+checkStatus();
+
+// ── Chat ──────────────────────────────────────────────────────
+function fillAndSend(q){document.getElementById('chat-inp').value=q;sendQuery();}
+function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+const aiAvSvg=`<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 9 Q4 4.5 6.5 7 Q9 9.5 11.5 5.5" stroke="#08a5bb" stroke-width="1.4" stroke-linecap="round" fill="none"/></svg>`;
+
+function buildChatChart(canvasId, rows, cols, chartType){
+  const labelCol=cols[0];
+  const numCols=cols.slice(1).filter(c=>{const v=rows[0]?.[c];return v!==null&&v!==undefined&&!isNaN(Number(v));});
+  if(!numCols.length) return;
+  const labels=rows.map(r=>String(r[labelCol]||'').slice(0,12));
+  const pal=['#08a5bb','#e09b00','#5bbfcc','#c0392b','#2a9d5c'];
+  const datasets=numCols.slice(0,3).map((col,i)=>({
+    label:col, data:rows.map(r=>r[col]!==null?+r[col]:null),
+    borderColor:pal[i],
+    backgroundColor:chartType==='line'?'rgba(8,165,187,0.07)':pal[i]+'aa',
+    borderWidth:2, fill:chartType==='line'&&i===0, tension:0.4, pointRadius:2,
+    borderRadius:chartType==='bar'?3:0
+  }));
+  const ctx=document.getElementById(canvasId);
+  if(!ctx) return;
+  new Chart(ctx,{type:chartType,data:{labels,datasets},options:{...chartBase,plugins:{legend:{labels:{color:'#3a6070',font:{family:"'DM Mono',monospace",size:10}}}}}});
+}
+
+async function sendQuery(){
+  const inp=document.getElementById('chat-inp');
+  const q=inp.value.trim(); if(!q) return;
+  inp.value=''; document.getElementById('send-btn').disabled=true;
+  const area=document.getElementById('chat-area');
+  area.innerHTML+=`<div class="msg-row user"><div class="msg-av user">K</div><div class="bubble user">${escHtml(q)}</div></div>`;
+  const typId='typ'+Date.now();
+  area.innerHTML+=`<div class="typing-row" id="${typId}"><div class="msg-av ai">${aiAvSvg}</div><div class="typing-bub"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>`;
+  area.scrollTop=area.scrollHeight;
+  try{
+    const r=await fetch(`${API}/query?q=${encodeURIComponent(q)}`);
+    const d=await r.json();
+    document.getElementById(typId)?.remove();
+    appendAiMsg(d,q);
+  }catch(e){
+    document.getElementById(typId)?.remove();
+    area.innerHTML+=`<div class="msg-row"><div class="msg-av ai">${aiAvSvg}</div><div class="bubble ai"><div class="error-bubble">Cannot connect to API at ${API}. Make sure uvicorn is running on EC2.</div></div></div>`;
+    area.scrollTop=area.scrollHeight;
+  }
+  document.getElementById('send-btn').disabled=false;
+}
+
+function appendAiMsg(d,q){
+  const area=document.getElementById('chat-area');
+  const rows=d.rows||[], cols=d.columns||[];
+  let tableHtml='';
+  if(rows.length>0&&cols.length>0){
+    const show=rows.slice(0,8);
+    tableHtml=`<div class="result-table-wrap"><table class="result-table"><thead><tr>${cols.map(c=>`<th>${escHtml(c)}</th>`).join('')}</tr></thead><tbody>${show.map(row=>`<tr>${cols.map(c=>`<td>${row[c]!==null&&row[c]!==undefined?row[c]:'—'}</td>`).join('')}</tr>`).join('')}</tbody></table>${rows.length>8?`<div style="font-size:9.5px;color:#6ab4c0;padding:4px 10px 5px;font-family:'DM Mono',monospace;">…and ${rows.length-8} more rows</div>`:''}</div>`;
+  }
+  const chartType=d.chart_type;
+  const chartId=chartType?`cc${++chatChartCounter}`:null;
+  const chartHtml=chartType?`<div class="chat-chart-wrap"><canvas id="${chartId}"></canvas></div>`:'';
+  const sqlH=escHtml(d.sql||'')
+    .replace(/\b(SELECT|FROM|WHERE|AND|OR|ORDER BY|GROUP BY|LIMIT|BETWEEN|AS|EXTRACT|YEAR|DISTINCT|HAVING|JOIN|LEFT|INNER|BY)\b/g,'<span class="kw">$1</span>')
+    .replace(/\b(AVG|COUNT|ROUND|MIN|MAX|STDDEV|SUM|TO_CHAR|DATE_TRUNC)\b/g,'<span class="fn">$1</span>');
+  area.innerHTML+=`<div class="msg-row"><div class="msg-av ai">${aiAvSvg}</div><div class="bubble ai">
+    <div class="llm-tag">${escHtml(d.llm||'AI')}</div>
+    <div class="sql-block">${sqlH}</div>
+    <div class="sql-meta">✓ ${d.row_count||0} rows returned · argo_profiles</div>
+    <p style="font-size:12px;color:#0a2c35;margin-top:8px;line-height:1.7;">${escHtml(d.answer||'')}</p>
+    ${tableHtml}${chartHtml}
+  </div></div>`;
+  area.scrollTop=area.scrollHeight;
+  if(chartType&&chartId){
+    requestAnimationFrame(()=>buildChatChart(chartId,rows.slice(0,60),cols,chartType));
+  }
+}
+
+// ── Leaflet Map ───────────────────────────────────────────────
+function initLeafletMap(){
+  if(leafletMap) return;
+  leafletMap=L.map('leaflet-map',{center:[10,75],zoom:4,zoomControl:true});
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{attribution:'© OSM © CARTO',subdomains:'abcd',maxZoom:19}).addTo(leafletMap);
+  leafletMarkers=L.layerGroup().addTo(leafletMap);
+}
+async function loadMap(){
+  if(!leafletMap) return;
+  const center=document.getElementById('mapCenter').value;
+  document.getElementById('map-loading').textContent='Loading floats…';
+  try{
+    const r=await fetch(`${API}/floats`); const all=await r.json();
+    const floats=center?all.filter(f=>f.data_center===center):all;
+    leafletMarkers.clearLayers();
+    const colors={incois:'#08a5bb',coriolis:'#5bbfcc',csiro:'#a8dce8'};
+    let cI=0,cC=0,cS=0;
+    floats.forEach(f=>{
+      const col=colors[f.data_center]||'#888';
+      const mk=L.circleMarker([+f.latitude,+f.longitude],{radius:5,fillColor:col,color:col,weight:1,opacity:0.9,fillOpacity:0.75});
+      mk.bindPopup(`<div class="lp-id">Float: ${f.float_id}</div>
+        <div class="lp-row"><span class="lp-k">Center</span><span class="lp-v">${(f.data_center||'').toUpperCase()}</span></div>
+        <div class="lp-row"><span class="lp-k">Lat</span><span class="lp-v">${(+f.latitude).toFixed(4)}°</span></div>
+        <div class="lp-row"><span class="lp-k">Lon</span><span class="lp-v">${(+f.longitude).toFixed(4)}°</span></div>
+        <div style="margin-top:7px;"><a href="#" style="color:var(--brand);font-size:10px;" onclick="jumpToProfile('${f.float_id}');return false;">View depth profile →</a></div>`);
+      mk.addTo(leafletMarkers);
+      if(f.data_center==='incois')cI++;
+      else if(f.data_center==='coriolis')cC++;
+      else if(f.data_center==='csiro')cS++;
+    });
+    document.getElementById('ms-total').textContent=floats.length;
+    document.getElementById('ms-incois').textContent=cI;
+    document.getElementById('ms-coriolis').textContent=cC;
+    document.getElementById('ms-csiro').textContent=cS;
+    document.getElementById('map-loading').textContent='';
+  }catch(e){document.getElementById('map-loading').textContent='⚠ Cannot load floats';}
+}
+function reloadMap(){leafletMarkers&&leafletMarkers.clearLayers();loadMap();}
+function jumpToProfile(id){
+  document.getElementById('dp-float').value=id;
+  document.getElementById('tc-float').value=id;
+  chartsInited.depth=false; chartsInited.thermo=false;
+  switchTab('depth');
+}
+
+// ── Analysis ──────────────────────────────────────────────────
+function onScopeChange(tab){ chartsInited[tab]=false; if(tab==='analysis') loadAnalysis(); }
+
+async function loadAnalysis(){
+  if(chartsInited.analysis) return;
+  const params=new URLSearchParams({lat_min:document.getElementById('aLatMin').value,lat_max:document.getElementById('aLatMax').value,lon_min:document.getElementById('aLonMin').value,lon_max:document.getElementById('aLonMax').value});
+  try{
+    const [rR,rO]=await Promise.all([fetch(`${API}/region?${params}`),fetch(`${API}/overview`)]);
+    const reg=await rR.json(), ov=await rO.json();
+    chartsInited.analysis=true;
+    document.getElementById('region-stats').innerHTML=`
+      <div class="stat-box"><div class="stat-val">${reg.avg_temp||'—'}°C</div><div class="stat-key">Avg Temp</div></div>
+      <div class="stat-box"><div class="stat-val">${reg.avg_sal||'—'}</div><div class="stat-key">Avg Salinity PSU</div></div>
+      <div class="stat-box"><div class="stat-val">${reg.float_count||'—'}</div><div class="stat-key">Floats in Region</div></div>
+      <div class="stat-box"><div class="stat-val">${reg.min_temp||'—'}°</div><div class="stat-key">Min Temp</div></div>
+      <div class="stat-box"><div class="stat-val">${reg.max_temp||'—'}°</div><div class="stat-key">Max Temp</div></div>
+      <div class="stat-box"><div class="stat-val">${Number(reg.total_obs||0).toLocaleString()}</div><div class="stat-key">Observations</div></div>`;
+    renderAnalysisCharts(+reg.avg_temp,+reg.std_temp||2, ov);
+  }catch(e){document.getElementById('region-stats').innerHTML='<div class="stat-box"><div class="stat-val" style="font-size:13px;color:#c0392b;">API Error</div><div class="stat-key">Check connection</div></div>';}
+}
+
+function renderAnalysisCharts(avgT,stdT,ov){
+  const labs=[],td=[];
+  for(let i=-3;i<=3;i+=0.5){labs.push((avgT+i*stdT).toFixed(1));const x=i;td.push(+(Math.exp(-x*x/2)/Math.sqrt(2*Math.PI)*100).toFixed(2));}
+  if(tempDistChartInst)tempDistChartInst.destroy();
+  tempDistChartInst=new Chart(document.getElementById('chart-temp-dist'),{type:'bar',data:{labels:labs,datasets:[{label:'Freq',data:td,backgroundColor:'rgba(8,165,187,0.55)',borderColor:'rgba(8,165,187,0.85)',borderWidth:1,borderRadius:2}]},options:{...chartBase,plugins:{legend:{display:false}}}});
+  if(centersChartInst)centersChartInst.destroy();
+  centersChartInst=new Chart(document.getElementById('chart-centers'),{type:'doughnut',data:{labels:['CSIRO','Coriolis','INCOIS'],datasets:[{data:[3448558,1479188,705286],backgroundColor:['rgba(168,220,232,0.7)','rgba(91,191,204,0.7)','rgba(8,165,187,0.7)'],borderColor:['rgba(168,220,232,0.4)','rgba(91,191,204,0.4)','rgba(8,165,187,0.4)'],borderWidth:1}]},options:{plugins:{legend:{labels:{color:'#3a6070',font:{family:"'DM Mono',monospace",size:9}}}},responsive:true,maintainAspectRatio:false,cutout:'65%'}});
+  if(ov&&ov.length){
+    const centers=ov.map(o=>o.data_center?.toUpperCase());
+    const temps=ov.map(o=>+o.avg_temp);
+    const sals=ov.map(o=>+o.avg_sal);
+    const pal=['rgba(8,165,187,0.65)','rgba(91,191,204,0.65)','rgba(168,220,232,0.65)'];
+    if(centerTempInst)centerTempInst.destroy();
+    centerTempInst=new Chart(document.getElementById('chart-center-temp'),{type:'bar',data:{labels:centers,datasets:[{label:'Avg Temp °C',data:temps,backgroundColor:pal,borderColor:pal.map(c=>c.replace('0.65','1')),borderWidth:1,borderRadius:4}]},options:{...chartBase,plugins:{legend:{display:false}}}});
+    if(centerSalInst)centerSalInst.destroy();
+    centerSalInst=new Chart(document.getElementById('chart-center-sal'),{type:'bar',data:{labels:centers,datasets:[{label:'Avg Salinity PSU',data:sals,backgroundColor:['rgba(224,155,0,0.6)','rgba(224,155,0,0.45)','rgba(224,155,0,0.3)'],borderColor:['rgba(224,155,0,0.9)','rgba(224,155,0,0.7)','rgba(224,155,0,0.5)'],borderWidth:1,borderRadius:4}]},options:{...chartBase,plugins:{legend:{display:false}}}});
+  }
+}
+// ── 1. THERMOCLINE CHART ─────────────────────────────────────
+// Change: depth now goes TOP→BOTTOM (natural), color-coded zones,
+// thermocline line clearly marked, salinity moved to tooltip only
+function renderThermoChart(depths, temps, sals, label, tcD){
+  document.getElementById('tc-depth').textContent = tcD ? tcD.toFixed(0)+'m' : '—';
+  document.getElementById('tc-subtitle').textContent = label + ' · ' + depths.length + ' depth levels';
+ 
+  const surfT = temps[0]?.toFixed(1) || '—';
+  const layers = [
+    {label:'Surface Layer',    range: tcD ? `0 – ${Math.max(0,tcD-20).toFixed(0)}m`     : '0 – mixed',      detail:`Mixed layer · ${surfT}°C`, bc:'var(--brand)'},
+    {label:'Thermocline Zone', range: tcD ? `${Math.max(0,tcD-20).toFixed(0)} – ${(tcD+30).toFixed(0)}m` : 'gradient zone', detail:'Sharp gradient · dT/dz max', bc:'#e09b00'},
+    {label:'Deep Layer',       range: tcD ? `${(tcD+30).toFixed(0)}m +`                 : 'below thermo',   detail:'Sub-thermocline · cooler water', bc:'#5bbfcc'}
+  ];
+  document.getElementById('tc-layers').innerHTML = layers.map(l =>
+    `<div class="thermo-band" style="border-left-color:${l.bc};">
+      <div style="font-size:11px;color:#3a6070;font-family:'DM Mono',monospace;margin-bottom:2px;">${l.label}</div>
+      <div style="font-size:18px;font-weight:700;color:#056070;font-family:'Syne',sans-serif;">${l.range}</div>
+      <div style="font-size:10px;color:#6ab4c0;font-family:'DM Mono',monospace;">${l.detail}</div>
+    </div>`
+  ).join('');
+ 
+  if(thermoChartInst) thermoChartInst.destroy();
+ 
+  // Limit to 40 points max for clarity
+  const step  = Math.max(1, Math.floor(depths.length / 40));
+  const dArr  = [], tArr = [], sArr = [], bgArr = [], ptArr = [];
+ 
+  for(let i = 0; i < depths.length; i += step){
+    const d = depths[i], t = temps[i];
+    dArr.push(d);
+    tArr.push(t);
+    sArr.push(sals[i]);
+ 
+    // Color each point by ocean zone
+    let color;
+    if(tcD){
+      if(d < tcD - 20)      color = 'rgba(8,165,187,0.85)';   // surface — teal
+      else if(d < tcD + 30) color = 'rgba(224,155,0,0.9)';    // thermocline — amber
+      else                   color = 'rgba(91,191,204,0.7)';   // deep — light blue
+    } else {
+      color = 'rgba(8,165,187,0.8)';
+    }
+    bgArr.push(color);
+    ptArr.push(d === tcD ? 7 : 4);
+  }
+ 
+  thermoChartInst = new Chart(document.getElementById('chart-thermo'), {
+    type: 'line',
+    data: {
+      // X = temperature, Y = depth label
+      labels: dArr.map(d => d + 'm'),
+      datasets: [{
+        label: 'Temperature (°C)',
+        data: tArr,
+        borderColor: 'rgba(8,146,165,0.4)',
+        borderWidth: 2,
+        pointBackgroundColor: bgArr,
+        pointBorderColor: bgArr,
+        pointRadius: ptArr,
+        fill: {
+          target: 'origin',
+          above: 'rgba(8,165,187,0.07)'
+        },
+        tension: 0.4
+      }]
+    },
+    options: {
+      indexAxis: 'y',                          // ← depth on Y, temp on X
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: ctx => `Depth: ${ctx[0].label}`,
+            label: ctx => {
+              const i   = ctx.dataIndex;
+              const sal = sArr[i];
+              let zone  = 'Surface';
+              if(tcD){
+                if(dArr[i] >= tcD - 20 && dArr[i] <= tcD + 30) zone = '🌡 Thermocline';
+                else if(dArr[i] > tcD + 30) zone = 'Deep';
+              }
+              return [`Temp: ${ctx.parsed.x}°C`, `Salinity: ${sal} PSU`, `Zone: ${zone}`];
+            }
+          },
+          backgroundColor: '#021820',
+          titleColor: '#08a5bb',
+          bodyColor: '#d4eef2',
+          borderColor: 'rgba(8,146,165,0.3)',
+          borderWidth: 1
+        },
+        // Thermocline depth annotation line
+        annotation: tcD ? {
+          annotations: {
+            thermoline: {
+              type: 'label',
+              yValue: tcD + 'm',
+              backgroundColor: 'rgba(224,155,0,0.15)',
+              borderColor: '#e09b00',
+              borderWidth: 1,
+              content: [`← Thermocline at ${tcD}m`],
+              color: '#e09b00',
+              font: { size: 9, family: "'DM Mono',monospace" }
+            }
+          }
+        } : {}
+      },
+      scales: {
+        x: {
+          title: { display: true, text: 'Temperature (°C)', color: '#6ab4c0', font: { size: 10 } },
+          ticks: { color: '#6ab4c0', font: { size: 9, family: "'DM Mono',monospace" } },
+          grid:  { color: 'rgba(8,146,165,0.07)' }
+        },
+        y: {
+          title: { display: true, text: 'Depth →  (shallow to deep)', color: '#6ab4c0', font: { size: 10 } },
+          ticks: { color: '#6ab4c0', font: { size: 9, family: "'DM Mono',monospace" } },
+          grid:  { color: 'rgba(8,146,165,0.07)' }
+        }
+      }
+    }
+  });
+}
+
+
+// ── 2. DEPTH PROFILE CHART ────────────────────────────────────
+// Change: Split temp and salinity into TWO separate clear charts
+// with intuitive annotations, no dual-axis confusion
+function renderDepthChart(depths, temps, sals, densities){
+  if(depthChartInst) depthChartInst.destroy();
+ 
+  // Downsample for readability
+  const step  = Math.max(1, Math.floor(depths.length / 40));
+  const dArr  = [], tArr = [], sArr = [];
+  for(let i = 0; i < depths.length; i += step){
+    dArr.push(depths[i]);
+    tArr.push(temps[i]);
+    sArr.push(sals[i]);
+  }
+ 
+  // Color gradient: warm→cool by temperature
+  const tMin  = Math.min(...tArr), tMax = Math.max(...tArr);
+  const ptColors = tArr.map(t => {
+    const ratio = (t - tMin) / (tMax - tMin + 0.001);
+    const r = Math.round(8   + ratio * (255 - 8));
+    const g = Math.round(165 + ratio * (100 - 165));
+    const b = Math.round(187 + ratio * (50  - 187));
+    return `rgb(${r},${g},${b})`;
+  });
+ 
+  depthChartInst = new Chart(document.getElementById('chart-depth-dual'), {
+    type: 'line',
+    data: {
+      labels: dArr.map(d => d + 'm'),
+      datasets: [
+        {
+          label: 'Temperature (°C)',
+          data: tArr,
+          borderColor: 'rgba(8,146,165,0.5)',
+          borderWidth: 2.5,
+          pointBackgroundColor: ptColors,
+          pointBorderColor: ptColors,
+          pointRadius: 4,
+          fill: { target: 'origin', above: 'rgba(8,165,187,0.06)' },
+          tension: 0.4,
+          yAxisID: 'y'
+        },
+        {
+          label: 'Salinity (PSU)',
+          data: sArr,
+          borderColor: 'rgba(224,155,0,0.6)',
+          borderWidth: 2,
+          pointBackgroundColor: 'rgba(224,155,0,0.7)',
+          pointBorderColor: 'rgba(224,155,0,0.7)',
+          pointRadius: 3,
+          fill: false,
+          tension: 0.3,
+          borderDash: [5,4],
+          yAxisID: 'y1'
+        }
+      ]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          labels: { color:'#3a6070', font:{ size:10, family:"'DM Mono',monospace" }, usePointStyle: true }
+        },
+        tooltip: {
+          callbacks: {
+            title: ctx => `Depth: ${ctx[0].label}`,
+            label: ctx => ctx.dataset.label + ': ' + ctx.parsed.x
+          },
+          backgroundColor: '#021820',
+          titleColor: '#08a5bb',
+          bodyColor: '#d4eef2',
+          borderColor: 'rgba(8,146,165,0.3)',
+          borderWidth: 1
+        }
+      },
+      scales: {
+        x: {
+          title: { display: true, text: 'Temperature (°C)  ←  warm       cool  →', color:'#08a5bb', font:{ size:9 } },
+          ticks: { color:'#6ab4c0', font:{ size:9, family:"'DM Mono',monospace" } },
+          grid:  { color:'rgba(8,146,165,0.07)' }
+        },
+        y: {
+          title: { display: true, text: 'Depth (shallow → deep)', color:'#6ab4c0', font:{ size:9 } },
+          ticks: { color:'#6ab4c0', font:{ size:9, family:"'DM Mono',monospace" } },
+          grid:  { color:'rgba(8,146,165,0.07)' }
+        },
+        y1: {
+          position: 'right',
+          title: { display: true, text: 'Salinity (PSU)', color:'#b08030', font:{ size:9 } },
+          ticks: { color:'#b08030', font:{ size:9, family:"'DM Mono',monospace" } },
+          grid:  { display: false }
+        }
+      }
+    }
+  });
+ 
+  // ── Observation density bars — show actual counts not equal heights
+  const bands = [
+    {l:'0–50m',   min:0,    max:50},
+    {l:'50–200m', min:50,   max:200},
+    {l:'200–500m',min:200,  max:500},
+    {l:'500–1k',  min:500,  max:1000},
+    {l:'1k–2k',   min:1000, max:2000},
+    {l:'2k+',     min:2000, max:99999}
+  ];
+ 
+  // Count how many depth readings fall in each band
+  bands.forEach(b => { b.v = depths.filter(d => d >= b.min && d < b.max).length; });
+  const maxV = Math.max(...bands.map(b => b.v), 1);
+ 
+  const wrap = document.getElementById('depth-bars');
+  wrap.innerHTML = '';
+  bands.forEach(b => {
+    const pct  = Math.round((b.v / maxV) * 100);
+    const col  = document.createElement('div');
+    col.className = 'depth-bar-col';
+    col.title  = `${b.l}: ${b.v} observations`;
+    col.innerHTML = `
+      <div style="font-size:9px;color:#6ab4c0;font-family:'DM Mono',monospace;margin-bottom:3px;">${b.v}</div>
+      <div class="depth-bar" style="height:${Math.max(pct,4)}%;background:rgba(8,165,187,${0.2 + pct/130});border:1px solid rgba(8,165,187,0.3);border-radius:3px 3px 0 0;"></div>
+      <div class="depth-bar-label">${b.l}</div>`;
+    wrap.appendChild(col);
+  });
+}
+
+
+// ── Time Series ───────────────────────────────────────────────
+async function loadTimeseries(){
+  if(chartsInited.ts) return;
+  const params=new URLSearchParams({lat_min:document.getElementById('ts-lat-min').value,lat_max:document.getElementById('ts-lat-max').value,lon_min:document.getElementById('ts-lon-min').value,lon_max:document.getElementById('ts-lon-max').value});
+  try{
+    const r=await fetch(`${API}/timeseries?${params}`); const data=await r.json();
+    chartsInited.ts=true;
+    if(!data.length)return;
+    if(tsChartInst)tsChartInst.destroy();
+    tsChartInst=new Chart(document.getElementById('chart-timeseries'),{type:'line',data:{labels:data.map(d=>d.month),datasets:[{label:'Avg Temp (°C)',data:data.map(d=>+d.avg_temp),borderColor:'#08a5bb',borderWidth:2,fill:true,backgroundColor:'rgba(8,165,187,0.07)',pointRadius:2,tension:0.4,yAxisID:'y'},{label:'Avg Salinity (PSU)',data:data.map(d=>+d.avg_sal),borderColor:'#e09b00',borderWidth:1.5,fill:false,pointRadius:2,tension:0.4,borderDash:[4,3],yAxisID:'y1'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#3a6070',font:{size:9,family:"'DM Mono',monospace"}}}},scales:{x:{ticks:{color:'#6ab4c0',font:{size:9,family:"'DM Mono',monospace"},maxRotation:45},grid:{color:'rgba(8,146,165,0.07)'}},y:{ticks:{color:'#6ab4c0',font:{size:9,family:"'DM Mono',monospace"}},grid:{color:'rgba(8,146,165,0.07)'},title:{display:true,text:'Temp °C',color:'#6ab4c0',font:{size:9}}},y1:{position:'right',ticks:{color:'#b08030',font:{size:9,family:"'DM Mono',monospace"}},grid:{display:false},title:{display:true,text:'Salinity PSU',color:'#b08030',font:{size:9}}}}}});
+  }catch(e){}
+}
+
+// ── 3. OHC CHART ─────────────────────────────────────────────
+// Change: profile split into a clear ZONE-COLORED area chart,
+// cards show MJ/m² with % of total, pie shows proportions clearly
+async function loadOhc(){
+  const fid   = document.getElementById('ohc-float').value.trim();
+  const cycle = document.getElementById('ohc-cycle').value.trim();
+  const dmax  = document.getElementById('ohc-depth').value.trim();
+ 
+  if(!fid){ document.getElementById('ohc-info').textContent = '⚠ Enter a Float ID'; return; }
+  document.getElementById('ohc-info').textContent = 'Computing OHC…';
+ 
+  ['total','surface','mixed','deep'].forEach(cls => {
+    const el = document.querySelector(`#ohc-cards .${cls} .ohc-val`);
+    if(el) el.textContent = '…';
+  });
+ 
+  try{
+    const r = await fetch(`${API}/ohc?float_id=${encodeURIComponent(fid)}&cycle=${encodeURIComponent(cycle)}&depth_max=${encodeURIComponent(dmax)}`);
+    if(!r.ok) throw new Error(`HTTP ${r.status}`);
+    const d = await r.json();
+ 
+    if(d.error){
+      document.getElementById('ohc-info').textContent = '⚠ ' + d.error;
+      ['total','surface','mixed','deep'].forEach(cls => {
+        const el = document.querySelector(`#ohc-cards .${cls} .ohc-val`);
+        if(el) el.textContent = '—';
+      });
+      return;
+    }
+ 
+    document.getElementById('ohc-info').textContent =
+      `Float ${fid} · Cycle ${cycle} · ${d.n_levels} depth levels · Thermocline: ${d.thermocline_depth ?? '—'}m`;
+    document.getElementById('ohc-subtitle').textContent =
+      `Float ${fid} · Cycle ${cycle} · Integrated to ${dmax}m · Avg Temp: ${d.avg_temp}°C · Avg Sal: ${d.avg_sal} PSU`;
+ 
+    // Cards with % of total
+    const total = Math.abs(d.ohc_total) || 1;
+    document.querySelector('#ohc-cards .total   .ohc-val').textContent = d.ohc_total   ?? '—';
+    document.querySelector('#ohc-cards .surface .ohc-val').textContent = d.ohc_surface ?? '—';
+    document.querySelector('#ohc-cards .mixed   .ohc-val').textContent = d.ohc_mixed   ?? '—';
+    document.querySelector('#ohc-cards .deep    .ohc-val').textContent = d.ohc_deep    ?? '—';
+ 
+    // ── Profile chart: zone-colored, depth goes top→bottom naturally
+    const prof = d.profile || [];
+    const tcD  = d.thermocline_depth;
+ 
+    // Build zone color per point
+    const ptColors = prof.map(p => {
+      if(!tcD)             return 'rgba(8,165,187,0.8)';
+      if(p.depth < tcD)    return 'rgba(255,200,50,0.85)';   // surface — warm yellow
+      if(p.depth < tcD+80) return 'rgba(224,100,0,0.85)';    // thermocline — orange
+      return 'rgba(91,191,204,0.75)';                         // deep — cool blue
+    });
+ 
+    if(ohcProfileInst) ohcProfileInst.destroy();
+    ohcProfileInst = new Chart(document.getElementById('chart-ohc-profile'), {
+      type: 'line',
+      data: {
+        labels: prof.map(p => p.depth + 'm'),
+        datasets: [{
+          label: 'Temperature (°C)',
+          data: prof.map(p => p.temperature),
+          borderColor: 'rgba(8,146,165,0.4)',
+          borderWidth: 2,
+          pointBackgroundColor: ptColors,
+          pointBorderColor: ptColors,
+          pointRadius: 3,
+          fill: { target: 'origin', above: 'rgba(8,165,187,0.06)' },
+          tension: 0.4
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              title: ctx => `Depth: ${ctx[0].label}`,
+              label: ctx => {
+                const i   = ctx.dataIndex;
+                const sal = prof[i]?.salinity ?? '—';
+                let zone  = 'Surface (warm)';
+                if(tcD && prof[i]?.depth >= tcD && prof[i]?.depth < tcD+80) zone = '🌡 Thermocline';
+                else if(tcD && prof[i]?.depth >= tcD+80) zone = 'Deep (cool)';
+                return [`Temp: ${ctx.parsed.x}°C`, `Salinity: ${sal} PSU`, zone];
+              }
+            },
+            backgroundColor: '#021820',
+            titleColor: '#08a5bb',
+            bodyColor: '#d4eef2',
+            borderColor: 'rgba(8,146,165,0.3)',
+            borderWidth: 1
+          }
+        },
+        scales: {
+          x: {
+            title: { display:true, text:'Temperature (°C)  — warmer = more heat stored', color:'#6ab4c0', font:{ size:9 } },
+            ticks: { color:'#6ab4c0', font:{ size:9, family:"'DM Mono',monospace" } },
+            grid:  { color:'rgba(8,146,165,0.07)' }
+          },
+          y: {
+            title: { display:true, text:'Depth (m)  — top = surface, bottom = deep', color:'#6ab4c0', font:{ size:9 } },
+            ticks: { color:'#6ab4c0', font:{ size:9, family:"'DM Mono',monospace" } },
+            grid:  { color:'rgba(8,146,165,0.07)' }
+          }
+        }
+      }
+    });
+ 
+    // ── Pie: show layer proportions with % labels
+    if(ohcPieInst) ohcPieInst.destroy();
+    const surfPct  = ((Math.abs(d.ohc_surface)/total)*100).toFixed(1);
+    const mixPct   = ((Math.abs(d.ohc_mixed)  /total)*100).toFixed(1);
+    const deepPct  = ((Math.abs(d.ohc_deep)   /total)*100).toFixed(1);
+ 
+    ohcPieInst = new Chart(document.getElementById('chart-ohc-pie'), {
+      type: 'doughnut',
+      data: {
+        labels: [
+          `Surface 0–100m (${surfPct}%)`,
+          `Mixed 100–300m (${mixPct}%)`,
+          `Deep 300–${dmax}m (${deepPct}%)`
+        ],
+        datasets: [{
+          data: [Math.abs(d.ohc_surface), Math.abs(d.ohc_mixed), Math.abs(d.ohc_deep)],
+          backgroundColor: ['rgba(255,200,50,0.8)','rgba(91,191,204,0.8)','rgba(8,165,187,0.6)'],
+          borderColor:     ['rgba(255,200,50,1)',   'rgba(91,191,204,1)',   'rgba(8,165,187,0.9)'],
+          borderWidth: 2
+        }]
+      },
+      options: {
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: { color:'#3a6070', font:{ family:"'DM Mono',monospace", size:9 }, padding: 10 }
+          },
+          tooltip: {
+            callbacks: {
+              label: ctx => ` ${ctx.label.split('(')[0].trim()}: ${ctx.parsed.toFixed(1)} MJ/m²`
+            }
+          }
+        },
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '50%'
+      }
+    });
+ 
+  } catch(e) {
+    console.error('OHC error:', e);
+    document.getElementById('ohc-info').textContent = `⚠ Error: ${e.message}`;
+    ['total','surface','mixed','deep'].forEach(cls => {
+      const el = document.querySelector(`#ohc-cards .${cls} .ohc-val`);
+      if(el) el.textContent = '—';
+    });
+  }
+}
+
+// ── Thermocline scope toggle ──────────────────────────────────
+function onTcScopeChange(){
+  const scope = document.getElementById('tc-scope').value;
+  document.getElementById('tc-center-sel').style.display = scope === 'center' ? '' : 'none';
+  document.getElementById('tc-float').style.display      = scope === 'float'  ? '' : 'none';
+  document.getElementById('tc-cycle').style.display      = scope === 'float'  ? '' : 'none';
+}
+ 
+// ── Load thermocline by data center average ───────────────────
+async function loadTcCenter(){
+  const dc = document.getElementById('tc-center-sel').value;
+  chartsInited.thermo = false;
+  document.getElementById('tc-info').textContent = 'Loading center average…';
+  try{
+    const r    = await fetch(`${API}/center-profiles?data_center=${dc}&depth_max=500`);
+    const data = await r.json();
+    chartsInited.thermo = true;
+    if(!data.length){ document.getElementById('tc-info').textContent = 'No data'; return; }
+    renderThermoChart(
+      data.map(d => +d.depth_band),
+      data.map(d => +d.avg_temp),
+      data.map(d => +d.avg_sal),
+      dc.toUpperCase() + ' Center Average',
+      null
+    );
+    document.getElementById('tc-info').textContent =
+      `${dc.toUpperCase()} · ${data.length} depth bands · avg across all floats`;
+  } catch(e){
+    document.getElementById('tc-info').textContent = 'Error — check API';
+  }
+}
+ 
+// ── Load thermocline (single float or center) ─────────────────
+async function loadThermo(){
+  if(chartsInited.thermo) return;
+  const scope = document.getElementById('tc-scope').value;
+  if(scope === 'center'){ loadTcCenter(); return; }
+ 
+  const fid   = document.getElementById('tc-float').value;
+  const cycle = document.getElementById('tc-cycle').value;
+  document.getElementById('tc-info').textContent = 'Loading from RDS…';
+  try{
+    const r    = await fetch(`${API}/profile?float_id=${encodeURIComponent(fid)}&cycle=${cycle}`);
+    const data = await r.json();
+    chartsInited.thermo = true;
+    if(!data.length){ document.getElementById('tc-info').textContent = 'No data found'; return; }
+ 
+    const depths = data.map(d => +d.depth);
+    const temps  = data.map(d => +d.temperature);
+    const sals   = data.map(d => +d.salinity);
+ 
+    // Find thermocline = depth of max dT/dz
+    let maxG = 0, tcD = 0;
+    for(let i = 1; i < depths.length; i++){
+      const dz = depths[i] - depths[i-1];
+      if(dz === 0) continue;
+      const g = Math.abs((temps[i] - temps[i-1]) / dz);
+      if(g > maxG){ maxG = g; tcD = depths[i]; }
+    }
+    document.getElementById('tc-info').textContent = `Thermocline at ~${tcD.toFixed(0)}m`;
+    renderThermoChart(depths, temps, sals, `Float ${fid} · Cycle ${cycle}`, tcD);
+  } catch(e){
+    document.getElementById('tc-info').textContent = 'Error — check API';
+  }
+}
+ 
+// ── Depth profile scope toggle ────────────────────────────────
+function onDpScopeChange(){
+  const scope = document.getElementById('dp-scope').value;
+  document.getElementById('dp-center-sel').style.display = scope === 'center' ? '' : 'none';
+  document.getElementById('dp-float').style.display      = scope === 'float'  ? '' : 'none';
+  document.getElementById('dp-cycle').style.display      = scope === 'float'  ? '' : 'none';
+}
+ 
+// ── Load depth profile by data center average ─────────────────
+async function loadDpCenter(){
+  const dc = document.getElementById('dp-center-sel').value;
+  chartsInited.depth = false;
+  try{
+    const r    = await fetch(`${API}/center-profiles?data_center=${dc}&depth_max=2000`);
+    const data = await r.json();
+    chartsInited.depth = true;
+    if(!data.length) return;
+    document.getElementById('dp-subtitle').textContent =
+      `${dc.toUpperCase()} · average of all floats · ${data.length} depth bands`;
+    renderDepthChart(
+      data.map(d => +d.depth_band),
+      data.map(d => +d.avg_temp),
+      data.map(d => +d.avg_sal),
+      data.map(d => +d.float_count)
+    );
+  } catch(e){
+    console.error('loadDpCenter error:', e);
+  }
+}
+ 
+// ── Load depth profile (single float or center) ───────────────
+async function loadDepth(){
+  if(chartsInited.depth) return;
+  const scope = document.getElementById('dp-scope').value;
+  if(scope === 'center'){ loadDpCenter(); return; }
+ 
+  const fid   = document.getElementById('dp-float').value;
+  const cycle = document.getElementById('dp-cycle').value;
+  try{
+    const r    = await fetch(`${API}/profile?float_id=${encodeURIComponent(fid)}&cycle=${cycle}`);
+    const data = await r.json();
+    chartsInited.depth = true;
+    if(!data.length) return;
+    document.getElementById('dp-subtitle').textContent =
+      `Float ${fid} · Cycle ${cycle} · ${data.length} depth levels`;
+    renderDepthChart(
+      data.map(d => +d.depth),
+      data.map(d => +d.temperature),
+      data.map(d => +d.salinity),
+      null
+    );
+  } catch(e){
+    console.error('loadDepth error:', e);
+  }
+}
+
+// ── SHAP ─────────────────────────────────────────────────────
+async function loadShap(){
+  if(chartsInited.shap) return;
+  const fid=document.getElementById('shap-float').value;
+  const cycle=document.getElementById('shap-cycle').value;
+  document.getElementById('shap-info').textContent='Computing SHAP…';
+  document.getElementById('shap-bars').innerHTML='';
+  try{
+    const r=await fetch(`${API}/shap?float_id=${encodeURIComponent(fid)}&cycle=${cycle}`);
+    const d=await r.json();
+    chartsInited.shap=true;
+    if(d.error){document.getElementById('shap-info').textContent=d.error;return;}
+    document.getElementById('shap-info').textContent=`${d.n_samples} samples · baseline ${d.baseline_temp}°C · ${d.model_type}`;
+    const maxA=Math.max(...d.shap_values.map(v=>Math.abs(v.value)));
+    document.getElementById('shap-bars').innerHTML=d.shap_values.map(v=>{
+      const pct=Math.min(100,(Math.abs(v.value)/maxA)*100).toFixed(1);
+      return `<div class="shap-bar"><div class="shap-feature">${v.feature}</div><div class="shap-track"><div class="shap-fill ${v.direction==='positive'?'pos':'neg'}" style="width:${pct}%"><span class="shap-val">${v.value>0?'+':''}${v.value}</span></div></div><div style="font-size:9px;color:#6ab4c0;font-family:'DM Mono',monospace;width:70px;text-align:right;">avg ${v.mean_feature_val}</div></div>`;
+    }).join('');
+    const top=d.shap_values[0];
+    document.getElementById('shap-explain').style.display='block';
+    document.getElementById('shap-explain').textContent=`${top.feature} is the strongest driver of temperature for float ${fid} (SHAP = ${top.value}). ${top.feature==='Depth'?'Temperature decreases with depth below the thermocline, consistent with solar heating attenuation.':'Geographic position governs heat absorption from solar radiation and regional circulation.'} Salinity contributions reflect thermohaline mixing dynamics in the Indian Ocean.`;
+    if(shapChartInst)shapChartInst.destroy();
+    shapChartInst=new Chart(document.getElementById('chart-shap'),{type:'bar',data:{labels:d.shap_values.map(v=>v.feature),datasets:[{label:'SHAP value',data:d.shap_values.map(v=>v.value),backgroundColor:d.shap_values.map(v=>v.direction==='positive'?'rgba(8,165,187,0.6)':'rgba(192,57,43,0.55)'),borderColor:d.shap_values.map(v=>v.direction==='positive'?'rgba(8,165,187,0.85)':'rgba(192,57,43,0.75)'),borderWidth:1,borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#6ab4c0',font:{size:11,family:"'DM Mono',monospace"}},grid:{color:'rgba(8,146,165,0.07)'}},y:{ticks:{color:'#6ab4c0',font:{size:9,family:"'DM Mono',monospace"}},grid:{color:'rgba(8,146,165,0.07)'},title:{display:true,text:'SHAP value',color:'#6ab4c0',font:{size:9}}}}}});
+  }catch(e){document.getElementById('shap-info').textContent='Error — check API';}
+}
+
+// ── Data Table ────────────────────────────────────────────────
+async function loadTable(){
+  const fid=document.getElementById('tbl-float').value.trim();
+  const ctr=document.getElementById('tbl-center').value;
+  const params=new URLSearchParams({limit:50,offset:tableOffset});
+  if(fid)params.set('float_id',fid);
+  if(ctr)params.set('center',ctr);
+  try{
+    const r=await fetch(`${API}/rows?${params}`); const rows=await r.json();
+    const tbody=document.getElementById('tbl-body');
+    if(!rows.length){tbody.innerHTML='<tr><td colspan="9" style="text-align:center;color:#6ab4c0;padding:20px;font-family:\'DM Mono\',monospace;">No data found</td></tr>';return;}
+    tbody.innerHTML=rows.map(row=>`<tr>
+      <td class="mono">${row.float_id}</td>
+      <td><span class="badge ${(row.data_center||'').toLowerCase()}">${(row.data_center||'').toUpperCase()}</span></td>
+      <td class="mono">${row.cycle_number}</td>
+      <td class="mono" style="font-size:11px;">${row.timestamp||'—'}</td>
+      <td class="mono">${row.latitude}</td><td class="mono">${row.longitude}</td>
+      <td class="mono">${row.depth}</td>
+      <td class="mono" style="color:#056070;font-weight:500;">${row.temperature}°</td>
+      <td class="mono" style="color:#3a7090;">${row.salinity}</td>
+    </tr>`).join('');
+    document.getElementById('tbl-pagination').innerHTML=`
+      <button class="page-btn" ${tableOffset===0?'disabled':''} onclick="tableOffset=Math.max(0,tableOffset-50);loadTable()">← Prev</button>
+      <span>Rows ${tableOffset+1}–${tableOffset+rows.length}</span>
+      <button class="page-btn" ${rows.length<50?'disabled':''} onclick="tableOffset+=50;loadTable()">Next →</button>`;
+  }catch(e){document.getElementById('tbl-body').innerHTML='<tr><td colspan="9" style="color:#c0392b;font-family:\'DM Mono\',monospace;padding:12px;">Connection error — check API</td></tr>';}
+}
+</script>
+</body>
+</html>
